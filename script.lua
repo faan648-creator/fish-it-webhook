@@ -1,5 +1,5 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - AUTO CAPTURE REAL CHAT & COLOR
+-- SCRIPT WEBHOOK FISH IT - FIX MUTATION & CHAT PARSER
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -12,27 +12,40 @@ local LocalPlayer = Players.LocalPlayer
 local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
 local autoObserverActive = false
 
--- Fungsi untuk mengekstrak Nickname pemancing dan Nama Ikan murni dari chat
+-- Fungsi untuk mengekstrak Nickname, Mutasi, dan Nama Ikan secara presisi
 local function parseFishDataFromChat(rawText)
-    local catcherName = LocalPlayer.Name -- Default cadangan jika gagal parsing
-    local fishName = rawText
+    local catcherName = LocalPlayer.Name 
     local fishMutation = "Normal"
+    local fishName = rawText
     
     -- 1. Ekstrak Nickname pemancing dari awal kalimat sebelum " obtained a"
-    -- Contoh: "Faan648 obtained a Shark..." -> "Faan648"
+    -- Contoh: "pioo obtained a STONE Comet Toad..." -> "pioo"
     local _, _, extractedName = string.find(rawText, "^(.-)%s+obtained a")
     if extractedName then
         catcherName = extractedName
     end
     
-    -- 2. Ekstrak Nama Ikan dari teks di antara "obtained a " dan " with a" (atau akhir kalimat)
-    local _, _, extractedFish = string.find(rawText, "obtained a%s+(.-)%s+with a")
-    if not extractedFish then
-        _, _, extractedFish = string.find(rawText, "obtained a%s+(.+)")
+    -- 2. Ekstrak teks setelah "obtained a " sampai sebelum tanda kurung berat "("
+    -- Contoh teks: "pioo obtained a STONE Comet Toad (1.53K kg) with a..."
+    -- Hasil tangkapan di antara "obtained a " dan " (" adalah: "STONE Comet Toad"
+    local _, _, middleText = string.find(rawText, "obtained a%s+(.-)%s+%(")
+    if not middleText then
+        -- Cadangan jika tidak ada tanda kurung berat
+        _, _, middleText = string.find(rawText, "obtained a%s+(.+)")
     end
     
-    if extractedFish then
-        fishName = extractedFish
+    if middleText then
+        -- 3. Pisahkan Mutasi (Kata pertama, contoh: "STONE") dari Nama Ikan (sisa teks di belakangnya)
+        -- Kita pecah berdasarkan spasi pertama
+        local firstSpacePos = string.find(middleText, "%s")
+        if firstSpacePos then
+            fishMutation = string.sub(middleText, 1, firstSpacePos - 1)
+            fishName = string.sub(middleText, firstSpacePos + 1)
+        else
+            -- Jika hanya ada 1 kata (tidak ada mutasi)
+            fishName = middleText
+            fishMutation = "Normal"
+        end
     end
     
     return catcherName, fishName, fishMutation
@@ -43,7 +56,7 @@ local function sendRealDataToServer(rawText, fishRarity)
     local catcherName, fishName, fishMutation = parseFishDataFromChat(rawText)
     
     local payload = {
-        nickname = catcherName, -- Mengambil nickname murni dari chat game
+        nickname = catcherName,
         fishName = fishName,
         fishRarity = fishRarity,
         fishWeight = 0.0,
@@ -63,8 +76,8 @@ local function sendRealDataToServer(rawText, fishRarity)
                     Body = jsonBody
                 })
                 Rayfield:Notify({
-                    Title = catcherName .. " Dapat " .. fishRarity .. "!",
-                    Content = fishName,
+                    Title = catcherName .. " (" .. fishMutation .. ")",
+                    Content = fishRarity .. " - " .. fishName,
                     Duration = 4,
                 })
             end)
@@ -80,11 +93,10 @@ local Window = Rayfield:CreateWindow({
    ConfigurationSaving = { Enabled = false }
 })
 
-local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
+MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
--- Toggle Utama untuk Menyalakan/Mematikan Auto Observer
 MainTab:CreateToggle({
-   Name = "Aktifkan Auto-Capture (Secret & Forgotten)",
+   Name = "Aktifkan Auto-Capture (All High Rarity)",
    CurrentValue = false,
    Flag = "AutoObserverToggle",
    Callback = function(Value)
@@ -92,13 +104,13 @@ MainTab:CreateToggle({
       if Value then
           Rayfield:Notify({
               Title = "Auto Observer Aktif",
-              Content = "Memantau layar untuk Secret & Forgotten...",
+              Content = "Memantau chat game & mutasi...",
               Duration = 4,
           })
       else
           Rayfield:Notify({
               Title = "Auto Observer Mati",
-              Content = "Pemantauan layar dihentikan.",
+              Content = "Pemantauan dihentikan.",
               Duration = 3,
           })
       end
@@ -106,7 +118,7 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- BACKGROUND SYSTEM: AUTO-OBSERVER BERBASIS WARNA RGB ASLI
+-- BACKGROUND SYSTEM: AUTO-OBSERVER
 -- ============================================================
 local lastSentText = ""
 
@@ -125,13 +137,17 @@ task.spawn(function()
                             
                             local detectedRarity = nil
                             
-                            -- 1. SECRET: Biru Tosca (R rendah, G & B tinggi)
+                            -- Filter warna RGB
                             if r < 100 and g > 150 and b > 150 then
                                 detectedRarity = "Secret"
-                                
-                            -- 2. FORGOTTEN: Hitam / Abu Gelap (R, G, B rendah)
                             elseif r < 80 and g < 80 and b < 80 then
                                 detectedRarity = "Forgotten"
+                            elseif r > 180 and g < 70 and b < 70 then
+                                detectedRarity = "Mythic"
+                            elseif r > 180 and g > 180 and b < 80 then
+                                detectedRarity = "Legendary"
+                            elseif r < 80 and g > 180 and b < 80 then
+                                detectedRarity = "Special"
                             end
                             
                             if detectedRarity then
@@ -148,6 +164,6 @@ end)
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Aktifkan toggle untuk mulai merekam data real.",
+   Content = "Parser mutasi berhasil diperbarui.",
    Duration = 5,
 })
