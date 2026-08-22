@@ -1,5 +1,5 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - SMART FILTERED HOOK
+-- SCRIPT WEBHOOK FISH IT - FULL DETAIL EXTRACTOR
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -10,32 +10,11 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
-local API_KEY = "TalonRahasiaBanget123" -- Sesuaikan dengan kunci di server Flaskmu
+local API_KEY = "TalonRahasiaBanget123" -- Ganti sesuai key kamu
 local autoObserverActive = false
 
--- Daftar kata/pola yang BUKAN ikan (untuk disaring/diabaikan)
-local ignoredWords = {")", "(", "Head", "LoadBeat", "Set", "1", "2", "3", "4", "5"}
-
-local function isIgnored(text)
-    for _, word in ipairs(ignoredWords) do
-        if text == word then return true end
-    end
-    -- Abaikan jika terlalu pendek atau berupa angka murni
-    if #text <= 2 or tonumber(text) ~= nil then return true end
-    return false
-end
-
--- Fungsi pengirim data ke Server Flask
-local function sendRealDataToServer(catcherName, fishName, fishRarity)
-    local payload = {
-        nickname = catcherName,
-        fishName = fishName,
-        fishRarity = fishRarity,
-        fishWeight = 0.0,
-        fishMutation = "Normal"
-    }
-
-    local jsonBody = HttpService:JSONEncode(payload)
+local function sendFullDataToServer(data)
+    local jsonBody = HttpService:JSONEncode(data)
     local httpRequest = http_request or request or syn.request
 
     if httpRequest then
@@ -51,8 +30,8 @@ local function sendRealDataToServer(catcherName, fishName, fishRarity)
                     Body = jsonBody
                 })
                 Rayfield:Notify({
-                    Title = "Ikan Langka Tertangkap!",
-                    Content = fishName,
+                    Title = "Webhook Terkirim!",
+                    Content = tostring(data.fishName) .. " (" .. tostring(data.fishWeight) .. ")",
                     Duration = 4,
                 })
             end)
@@ -63,7 +42,7 @@ end
 -- Membuat Window UI Rayfield
 local Window = Rayfield:CreateWindow({
    Name = "Webhook Kesayangan Talon",
-   LoadingTitle = "Loading Smart Hook...",
+   LoadingTitle = "Loading Detailed Hook...",
    LoadingSubtitle = "by Akihito_",
    ConfigurationSaving = { Enabled = false }
 })
@@ -71,15 +50,15 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
 MainTab:CreateToggle({
-   Name = "Aktifkan Smart Filter Webhook",
+   Name = "Aktifkan Full Detail Webhook",
    CurrentValue = false,
-   Flag = "SmartHookToggle",
+   Flag = "DetailHookToggle",
    Callback = function(Value)
       autoObserverActive = Value
       if Value then
           Rayfield:Notify({
               Title = "Hook Aktif",
-              Content = "Memantau tangkapan ikan secara cerdas...",
+              Content = "Menangkap data lengkap ikan...",
               Duration = 4,
           })
       else
@@ -93,7 +72,7 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- FILTERED EVENT LISTENER
+-- DEEP TABLE EXTRACTOR (MENGESTREK VARIANT, TIER, BERAT, DLL)
 -- ============================================================
 for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
     if descendant:IsA("RemoteEvent") then
@@ -101,18 +80,24 @@ for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
             if not autoObserverActive then return end
             
             local args = {...}
-            
-            -- Cek argumen ke-3 (karena sering jadi lokasi nama ikan)
-            if #args >= 3 and type(args[1]) == "string" and type(args[3]) == "string" then
-                local catcherName = args[1]
-                local potentialFish = args[3]
-                
-                -- Pastikan bukan simbol atau teks sampah
-                if not isIgnored(potentialFish) then
-                    local rarity = "Secret / Rare"
-                    
-                    -- Kirim ke Flask server
-                    sendRealDataToServer(tostring(catcherName), tostring(potentialFish), tostring(rarity))
+            for _, v in ipairs(args) do
+                if type(v) == "table" then
+                    -- Mencari indikasi objek ikan berdasarkan key yang biasa dipakai game
+                    local fishName = v.Name or v.FishName or v.Item or v.Title
+                    if fishName and type(fishName) == "string" and #fishName > 2 then
+                        
+                        local payload = {
+                            nickname = v.Player or v.Username or LocalPlayer.Name,
+                            fishName = fishName,
+                            fishTier = v.Tier or v.Rarity or "SECRET",
+                            fishWeight = tostring(v.Weight or v.Size or "0") .. " kg",
+                            fishVariant = v.Variant or v.Mutation or nil,
+                            fishChance = v.Chance or v.Odds or "1 in 3M"
+                        }
+                        
+                        sendFullDataToServer(payload)
+                        break
+                    end
                 end
             end
         end)
@@ -121,6 +106,6 @@ end
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Filter cerdas siap digunakan.",
+   Content = "Siap memantau ikan dengan detail.",
    Duration = 5,
 })
