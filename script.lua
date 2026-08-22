@@ -1,9 +1,17 @@
+-- ============================================================
+-- SCRIPT WEBHOOK FISH IT - VERSI SEDERHANA DENGAN DROPDOWN
+-- ============================================================
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
+local selectedRarity = "Common" -- Default rarity
 
+-- Fungsi pengirim data
 local function sendToMyServer(fishName, fishRarity, fishWeight, fishMutation)
     local payload = {
         nickname = LocalPlayer.Name,
@@ -22,27 +30,55 @@ local function sendToMyServer(fishName, fishRarity, fishWeight, fishMutation)
                 httpRequest({
                     Url = SERVER_URL,
                     Method = "POST",
-                    Headers = {
-                        ["Content-Type"] = "application/json"
-                    },
+                    Headers = { ["Content-Type"] = "application/json" },
                     Body = jsonBody
+                })
+                Rayfield:Notify({
+                    Title = "Webhook Terkirim",
+                    Content = fishName .. " (" .. fishRarity .. ")",
+                    Duration = 3,
                 })
             end)
         end)
     end
 end
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local fishEvent = ReplicatedStorage:WaitForChild("NamaFolderGame"):WaitForChild("NamaRemoteIkan")
+-- Membuat Window UI Sederhana
+local Window = Rayfield:CreateWindow({
+   Name = "Fish It! Webhook Test",
+   LoadingTitle = "Loading Menu...",
+   LoadingSubtitle = "by Creator",
+   ConfigurationSaving = { Enabled = false }
+})
 
-if fishEvent then
-    fishEvent.OnClientEvent:Connect(function(dataPacket)
-        local name = dataPacket.Name or "Unknown"
-        local rarity = dataPacket.Rarity or "Common"
-        local weight = dataPacket.Weight or 0
-        local mutation = dataPacket.Mutation or "None"
+local MainTab = Window:CreateTab("Webhook Test", 4483362458)
 
-        sendToMyServer(name, rarity, weight, mutation)
-    end)
-    print("Script Fish It Webhook Berhasil Aktif & Real-Time!")
-end
+-- Dropdown Rarity
+MainTab:CreateDropdown({
+   Name = "Pilih Rarity Ikan",
+   Options = {"Uncommon", "Common", "Epic", "Legend", "Mythic", "Secret", "Forgotten"},
+   CurrentOption = "Common",
+   Flag = "RarityDropdown",
+   Callback = function(Option)
+      selectedRarity = Option
+   end,
+})
+
+-- Tombol Kirim Tes Manual Berdasarkan Dropdown
+MainTab:CreateButton({
+   Name = "Kirim Tes Sesuai Rarity",
+   Callback = function()
+      sendToMyServer("Ikan Uji Coba", selectedRarity, 50.0, "Normal")
+      Rayfield:Notify({
+         Title = "Berhasil Dikirim",
+         Content = "Mengirim ikan dengan rarity: " .. selectedRarity,
+         Duration = 3,
+      })
+   end,
+})
+
+Rayfield:Notify({
+   Title = "UI Berhasil Dimuat!",
+   Content = "Pilih rarity di dropdown lalu klik tombol kirim.",
+   Duration = 5,
+})
