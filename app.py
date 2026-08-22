@@ -4,59 +4,57 @@ import requests
 
 app = Flask(__name__)
 
-# Ambil URL Webhook asli dan Secret Key dari Environment Variables Render
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
-# Buat kunci rahasia sendiri (bebas, asal sama dengan yang di Roblox)
 SECRET_API_KEY = os.environ.get("SECRET_API_KEY", "TalonRahasiaBanget123")
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    # 1. Validasi Kunci Keamanan dari Roblox
     client_key = request.headers.get("X-API-Key")
     if client_key != SECRET_API_KEY:
-        return jsonify({"error": "Unauthorized! Kunci salah."}), 403
+        return jsonify({"error": "Unauthorized!"}), 403
 
-    # 2. Ambil data JSON yang dikirim Roblox
     data = request.json
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
     nickname = data.get("nickname", "Unknown Player")
     fish_name = data.get("fishName", "Unknown Fish")
-    fish_rarity = data.get("fishRarity", "Secret")
-    fish_weight = data.get("fishWeight", 0.0)
-    fish_mutation = data.get("fishMutation", "Normal")
+    fish_tier = data.get("fishTier", "SECRET")
+    fish_weight = data.get("fishWeight", "0 kg")
+    fish_variant = data.get("fishVariant", None)  # Bisa None kalau tidak ada mutasi
+    fish_chance = data.get("fishChance", "Unknown")
 
-    # 3. Tentukan Warna Embed Discord Berdasarkan Rarity
-    embed_color = 0x00FFCC  # Default Hijau Tosca untuk Secret
-    if fish_rarity.lower() == "forgotten":
-        embed_color = 0xFF0055  # Merah/Pink untuk Forgotten
+    # Susun fields Discord mirip gaya Lynx
+    fields = [
+        {"name": "👤 Pemain", "value": f"`{nickname}`", "inline": True},
+        {"name": "🐟 Fish Name", "value": f"**{fish_name}** ({fish_weight})", "inline": False},
+        {"name": "⭐ Fish Tier", "value": f"`{fish_tier}`", "inline": True},
+    ]
 
-    # 4. Format pesan ke Discord
+    # Kalau ikannya punya varian/mutasi (seperti "Stone"), masukkan field-nya
+    if fish_variant and fish_variant != "Normal":
+        fields.append({"name": "🧬 Variant", "value": f"`{fish_variant}`", "inline": True})
+
+    fields.append({"name": "🎲 Chance", "value": f"`{fish_chance}`", "inline": True})
+
     discord_payload = {
+        "content": f"New **{fish_tier}** fish caught!",
         "embeds": [
             {
-                "title": f"🎣 Tangkapan Langka Baru!",
-                "color": embed_color,
-                "fields": [
-                    {"name": "👤 Pemain", "value": f"`{nickname}`", "inline": True},
-                    {"name": "🐟 Nama Ikan", "value": f"**{fish_name}**", "inline": True},
-                    {"name": "⭐ Rarity", "value": f"`{fish_rarity}`", "inline": True},
-                    {"name": "⚖️ Berat", "value": f"{fish_weight} kg", "inline": True},
-                    {"name": "✨ Mutation", "value": f"{fish_mutation}", "inline": True}
-                ],
+                "title": "🎣 Lynx Webhook | Fish Caught",
+                "color": 0x00FFFF,
+                "fields": fields,
                 "footer": {"text": "Fish It! Auto Webhook Monitor"}
             }
         ]
     }
 
-    # 5. Teruskan ke Webhook Discord Asli
     response = requests.post(DISCORD_WEBHOOK_URL, json=discord_payload)
 
-    if response.status_code == 204 or response.status_code == 200:
-        return jsonify({"status": "success", "message": "Sent to Discord"}), 200
+    if response.status_code in [200, 204]:
+        return jsonify({"status": "success"}), 200
     else:
-        return jsonify({"status": "error", "message": "Failed to reach Discord"}), 500
+        return jsonify({"status": "error"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
