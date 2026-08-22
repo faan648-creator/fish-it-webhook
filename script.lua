@@ -1,60 +1,26 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - FINAL (PLAYERGUI & HIGH RARITY ONLY)
+-- SCRIPT WEBHOOK FISH IT - SECURE REMOTE HOOK
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
+local API_KEY = "TalonRahasiaBanget123" -- Harus sama persis dengan di Flask/Render!
 local autoObserverActive = false
 
--- Fungsi untuk mengekstrak Nickname, Mutasi, dan Nama Ikan secara presisi
-local function parseFishDataFromChat(rawText)
-    local catcherName = LocalPlayer.Name 
-    local fishMutation = "Normal"
-    local fishName = rawText
-    
-    -- 1. Ekstrak Nickname pemancing dari awal kalimat sebelum " obtained a"
-    local _, _, extractedName = string.find(rawText, "^(.-)%s+obtained a")
-    if extractedName then
-        catcherName = extractedName
-    end
-    
-    -- 2. Ekstrak teks setelah "obtained a " sampai sebelum tanda kurung berat "("
-    local _, _, middleText = string.find(rawText, "obtained a%s+(.-)%s+%(")
-    if not middleText then
-        _, _, middleText = string.find(rawText, "obtained a%s+(.+)")
-    end
-    
-    if middleText then
-        -- 3. Pisahkan Mutasi (Kata pertama, contoh: "STONE") dari Nama Ikan
-        local firstSpacePos = string.find(middleText, "%s")
-        if firstSpacePos then
-            fishMutation = string.sub(middleText, 1, firstSpacePos - 1)
-            fishName = string.sub(middleText, firstSpacePos + 1)
-        else
-            fishName = middleText
-            fishMutation = "Normal"
-        end
-    end
-    
-    return catcherName, fishName, fishMutation
-end
-
--- Fungsi pengirim data real ke Server Flask kamu
-local function sendRealDataToServer(rawText, fishRarity)
-    local catcherName, fishName, fishMutation = parseFishDataFromChat(rawText)
-    
+-- Fungsi pengirim data aman ke Server Flask kamu
+local function sendRealDataToServer(catcherName, fishName, fishRarity)
     local payload = {
         nickname = catcherName,
         fishName = fishName,
         fishRarity = fishRarity,
         fishWeight = 0.0,
-        fishMutation = fishMutation
+        fishMutation = "Normal"
     }
 
     local jsonBody = HttpService:JSONEncode(payload)
@@ -66,11 +32,14 @@ local function sendRealDataToServer(rawText, fishRarity)
                 httpRequest({
                     Url = SERVER_URL,
                     Method = "POST",
-                    Headers = { ["Content-Type"] = "application/json" },
+                    Headers = { 
+                        ["Content-Type"] = "application/json",
+                        ["X-API-Key"] = API_KEY -- Menyertakan kunci keamanan
+                    },
                     Body = jsonBody
                 })
                 Rayfield:Notify({
-                    Title = catcherName .. " (" .. fishMutation .. ")",
+                    Title = "Webhook Terkirim!",
                     Content = fishRarity .. " - " .. fishName,
                     Duration = 4,
                 })
@@ -82,7 +51,7 @@ end
 -- Membuat Window UI Rayfield
 local Window = Rayfield:CreateWindow({
    Name = "Webhook Kesayangan Talon",
-   LoadingTitle = "Loading Observer...",
+   LoadingTitle = "Loading Secure Hook...",
    LoadingSubtitle = "by Akihito_",
    ConfigurationSaving = { Enabled = false }
 })
@@ -90,20 +59,20 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
 MainTab:CreateToggle({
-   Name = "Aktifkan Auto-Capture (Secret & Forgotten)",
+   Name = "Aktifkan Secure Remote Hook",
    CurrentValue = false,
-   Flag = "AutoObserverToggle",
+   Flag = "SecureHookToggle",
    Callback = function(Value)
       autoObserverActive = Value
       if Value then
           Rayfield:Notify({
-              Title = "Auto Observer Aktif",
-              Content = "Memantau PlayerGui (Secret & Forgotten)...",
+              Title = "Hook Aktif",
+              Content = "Memantau jaringan secara pasif & aman...",
               Duration = 4,
           })
       else
           Rayfield:Notify({
-              Title = "Auto Observer Mati",
+              Title = "Hook Mati",
               Content = "Pemantauan dihentikan.",
               Duration = 3,
           })
@@ -112,47 +81,32 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- BACKGROUND SYSTEM: AUTO-OBSERVER (PLAYERGUI VERSION)
+-- BACKGROUND SYSTEM: SUPER LIGHTWEIGHT EVENT LISTENER
 -- ============================================================
-local lastSentText = ""
-
-task.spawn(function()
-    while true do
-        task.wait(0.4)
-        if autoObserverActive then
-            pcall(function()
-                -- Menggunakan PlayerGui agar aman dari blokir executor
-                for _, descendant in ipairs(PlayerGui:GetDescendants()) do
-                    if descendant:IsA("TextLabel") then
-                        local text = descendant.Text
-                        
-                        if string.find(text, "obtained a") and text ~= lastSentText then
-                            local color = descendant.TextColor3
-                            local r, g, b = math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255)
-                            
-                            local detectedRarity = nil
-                            
-                            -- Filter warna RGB (Hanya Secret & Forgotten)
-                            if r < 100 and g > 150 and b > 150 then
-                                detectedRarity = "Secret"
-                            elseif r < 80 and g < 80 and b < 80 then
-                                detectedRarity = "Forgotten"
-                            end
-                            
-                            if detectedRarity then
-                                lastSentText = text
-                                sendRealDataToServer(text, detectedRarity)
-                            end
-                        end
+for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
+    if descendant:IsA("RemoteEvent") then
+        descendant.OnClientEvent:Connect(function(...)
+            if not autoObserverActive then return end
+            
+            local args = {...}
+            for _, v in ipairs(args) do
+                if type(v) == "table" then
+                    local fishName = v.Name or v.FishName or v.Item
+                    local rarity = v.Rarity or v.Tier or "Secret"
+                    
+                    if fishName and type(fishName) == "string" then
+                        local catcher = v.Player or v.Username or LocalPlayer.Name
+                        sendRealDataToServer(tostring(catcher), tostring(fishName), tostring(rarity))
+                        break
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
-end)
+end
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Siap memantau ikan ultra-langka.",
+   Content = "Sistem aman siap digunakan.",
    Duration = 5,
 })
