@@ -69,7 +69,7 @@ def webhook():
 
 
     # -----------------------------------------------------
-    # DEFAULT
+    # DEFAULT VALUES
     # -----------------------------------------------------
 
     if not nickname:
@@ -78,9 +78,12 @@ def webhook():
     if not fish_mutation:
         fish_mutation = "None"
 
+    if fish_weight is None:
+        fish_weight = 0.0  # Default aman jika berat tidak terkirim
+
 
     # -----------------------------------------------------
-    # VALIDASI
+    # VALIDASI FIELD UTAMA
     # -----------------------------------------------------
 
     if not fish_name:
@@ -95,12 +98,6 @@ def webhook():
             "message": "fishRarity tidak ditemukan"
         }), 400
 
-    if fish_weight is None:
-        return jsonify({
-            "success": False,
-            "message": "fishWeight tidak ditemukan"
-        }), 400
-
 
     # =====================================================
     # DATA UNTUK DISCORD
@@ -108,20 +105,15 @@ def webhook():
 
     discord_data = {
         "username": "Caught Fish",
-
         "content": (
             f"👤 Pemancing: {nickname}\n"
             f"🧬 Mutasi: {fish_mutation}"
         ),
-
         "embeds": [
             {
                 "title": "🎣 Fish It! - Catch Notification",
-
                 "description": "Tangkapan baru terdeteksi.",
-
                 "color": 3447003,
-
                 "fields": [
                     {
                         "name": "🐟 Nama Ikan",
@@ -155,21 +147,10 @@ def webhook():
 
 
     # =====================================================
-    # DEBUG PAYLOAD
-    # =====================================================
-
-    print("\n========================================")
-    print("DISCORD DATA YANG AKAN DIKIRIM:")
-    print(discord_data)
-    print("========================================")
-
-
-    # =====================================================
     # KIRIM KE DISCORD
     # =====================================================
 
     try:
-
         response = requests.post(
             DISCORD_WEBHOOK_URL,
             json=discord_data,
@@ -182,18 +163,14 @@ def webhook():
         print("========================================")
 
         if response.status_code not in (200, 204):
-
             print("RESPONSE:", response.text)
-
             return jsonify({
                 "success": False,
                 "message": "Gagal mengirim ke Discord",
                 "discord_status": response.status_code
             }), 502
 
-
     except requests.RequestException as e:
-
         print("\n========================================")
         print("REQUEST ERROR")
         print(e)
@@ -206,11 +183,11 @@ def webhook():
 
 
     # =====================================================
-    # LOG
+    # LOG BERHASIL
     # =====================================================
 
     print("\n========================================")
-    print("CATCH BERHASIL")
+    print("CATCH BERHASIL DIKIRIM KE DISCORD")
     print("========================================")
     print(f"👤 Pemancing : {nickname}")
     print(f"🐟 Ikan      : {fish_name}")
@@ -221,7 +198,7 @@ def webhook():
 
 
     # =====================================================
-    # RESPONSE
+    # RESPONSE KE ROBLOX
     # =====================================================
 
     return jsonify({
@@ -238,21 +215,22 @@ def webhook():
 
 
 # =========================================================
-# RUN SERVER
+# RUN SERVER (OTOMATIS MENYESUAIKAN RENDER PORT)
 # =========================================================
 
 if __name__ == "__main__":
-
+    port = int(os.environ.get("PORT", 10000))
+    
     print("========================================")
     print("🎣 FISH IT WEBHOOK SERVER")
     print("========================================")
     print("Status   : ONLINE")
-    print("Port     : 5000")
+    print(f"Port     : {port}")
     print("Endpoint : /webhook")
     print("========================================")
 
     app.run(
         host="0.0.0.0",
-        port=5000,
+        port=port,
         debug=False
     )
