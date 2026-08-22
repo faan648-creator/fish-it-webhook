@@ -1,13 +1,13 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - FIX MUTATION & CHAT PARSER
+-- SCRIPT WEBHOOK FISH IT - FINAL (PLAYERGUI & HIGH RARITY ONLY)
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
 local autoObserverActive = false
@@ -19,30 +19,24 @@ local function parseFishDataFromChat(rawText)
     local fishName = rawText
     
     -- 1. Ekstrak Nickname pemancing dari awal kalimat sebelum " obtained a"
-    -- Contoh: "pioo obtained a STONE Comet Toad..." -> "pioo"
     local _, _, extractedName = string.find(rawText, "^(.-)%s+obtained a")
     if extractedName then
         catcherName = extractedName
     end
     
     -- 2. Ekstrak teks setelah "obtained a " sampai sebelum tanda kurung berat "("
-    -- Contoh teks: "pioo obtained a STONE Comet Toad (1.53K kg) with a..."
-    -- Hasil tangkapan di antara "obtained a " dan " (" adalah: "STONE Comet Toad"
     local _, _, middleText = string.find(rawText, "obtained a%s+(.-)%s+%(")
     if not middleText then
-        -- Cadangan jika tidak ada tanda kurung berat
         _, _, middleText = string.find(rawText, "obtained a%s+(.+)")
     end
     
     if middleText then
-        -- 3. Pisahkan Mutasi (Kata pertama, contoh: "STONE") dari Nama Ikan (sisa teks di belakangnya)
-        -- Kita pecah berdasarkan spasi pertama
+        -- 3. Pisahkan Mutasi (Kata pertama, contoh: "STONE") dari Nama Ikan
         local firstSpacePos = string.find(middleText, "%s")
         if firstSpacePos then
             fishMutation = string.sub(middleText, 1, firstSpacePos - 1)
             fishName = string.sub(middleText, firstSpacePos + 1)
         else
-            -- Jika hanya ada 1 kata (tidak ada mutasi)
             fishName = middleText
             fishMutation = "Normal"
         end
@@ -93,10 +87,10 @@ local Window = Rayfield:CreateWindow({
    ConfigurationSaving = { Enabled = false }
 })
 
-MainTab = Window:CreateTab("Auto Monitor", 4483362458)
+local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
 MainTab:CreateToggle({
-   Name = "Aktifkan Auto-Capture (All High Rarity)",
+   Name = "Aktifkan Auto-Capture (Secret & Forgotten)",
    CurrentValue = false,
    Flag = "AutoObserverToggle",
    Callback = function(Value)
@@ -104,7 +98,7 @@ MainTab:CreateToggle({
       if Value then
           Rayfield:Notify({
               Title = "Auto Observer Aktif",
-              Content = "Memantau chat game & mutasi...",
+              Content = "Memantau PlayerGui (Secret & Forgotten)...",
               Duration = 4,
           })
       else
@@ -118,7 +112,7 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- BACKGROUND SYSTEM: AUTO-OBSERVER
+-- BACKGROUND SYSTEM: AUTO-OBSERVER (PLAYERGUI VERSION)
 -- ============================================================
 local lastSentText = ""
 
@@ -127,7 +121,8 @@ task.spawn(function()
         task.wait(0.4)
         if autoObserverActive then
             pcall(function()
-                for _, descendant in ipairs(CoreGui:GetDescendants()) do
+                -- Menggunakan PlayerGui agar aman dari blokir executor
+                for _, descendant in ipairs(PlayerGui:GetDescendants()) do
                     if descendant:IsA("TextLabel") then
                         local text = descendant.Text
                         
@@ -137,17 +132,11 @@ task.spawn(function()
                             
                             local detectedRarity = nil
                             
-                            -- Filter warna RGB
+                            -- Filter warna RGB (Hanya Secret & Forgotten)
                             if r < 100 and g > 150 and b > 150 then
                                 detectedRarity = "Secret"
                             elseif r < 80 and g < 80 and b < 80 then
                                 detectedRarity = "Forgotten"
-                            elseif r > 180 and g < 70 and b < 70 then
-                                detectedRarity = "Mythic"
-                            elseif r > 180 and g > 180 and b < 80 then
-                                detectedRarity = "Legendary"
-                            elseif r < 80 and g > 180 and b < 80 then
-                                detectedRarity = "Special"
                             end
                             
                             if detectedRarity then
@@ -164,6 +153,6 @@ end)
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Parser mutasi berhasil diperbarui.",
+   Content = "Siap memantau ikan ultra-langka.",
    Duration = 5,
 })
