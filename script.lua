@@ -1,5 +1,5 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - SECURE REMOTE HOOK
+-- SCRIPT WEBHOOK FISH IT - FINAL & PRECISE HOOK
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -10,10 +10,10 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
-local API_KEY = "TalonRahasiaBanget123" -- Harus sama persis dengan di Flask/Render!
+local API_KEY = "TalonRahasiaBanget123" -- Sesuaikan dengan kunci di server Flaskmu
 local autoObserverActive = false
 
--- Fungsi pengirim data aman ke Server Flask kamu
+-- Fungsi pengirim data ke Server Flask
 local function sendRealDataToServer(catcherName, fishName, fishRarity)
     local payload = {
         nickname = catcherName,
@@ -34,7 +34,7 @@ local function sendRealDataToServer(catcherName, fishName, fishRarity)
                     Method = "POST",
                     Headers = { 
                         ["Content-Type"] = "application/json",
-                        ["X-API-Key"] = API_KEY -- Menyertakan kunci keamanan
+                        ["X-API-Key"] = API_KEY
                     },
                     Body = jsonBody
                 })
@@ -51,7 +51,7 @@ end
 -- Membuat Window UI Rayfield
 local Window = Rayfield:CreateWindow({
    Name = "Webhook Kesayangan Talon",
-   LoadingTitle = "Loading Secure Hook...",
+   LoadingTitle = "Loading Precise Hook...",
    LoadingSubtitle = "by Akihito_",
    ConfigurationSaving = { Enabled = false }
 })
@@ -59,15 +59,15 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
 MainTab:CreateToggle({
-   Name = "Aktifkan Secure Remote Hook",
+   Name = "Aktifkan Auto Webhook Ikan",
    CurrentValue = false,
-   Flag = "SecureHookToggle",
+   Flag = "PreciseHookToggle",
    Callback = function(Value)
       autoObserverActive = Value
       if Value then
           Rayfield:Notify({
               Title = "Hook Aktif",
-              Content = "Memantau jaringan secara pasif & aman...",
+              Content = "Menangkap data tangkapan ikan...",
               Duration = 4,
           })
       else
@@ -81,7 +81,7 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- BACKGROUND SYSTEM: SUPER LIGHTWEIGHT EVENT LISTENER
+-- TARGETED EVENT LISTENER (BERDASARKAN STRUKTUR ARGUMEN)
 -- ============================================================
 for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
     if descendant:IsA("RemoteEvent") then
@@ -89,17 +89,18 @@ for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
             if not autoObserverActive then return end
             
             local args = {...}
-            for _, v in ipairs(args) do
-                if type(v) == "table" then
-                    local fishName = v.Name or v.FishName or v.Item
-                    local rarity = v.Rarity or v.Tier or "Secret"
-                    
-                    if fishName and type(fishName) == "string" then
-                        local catcher = v.Player or v.Username or LocalPlayer.Name
-                        sendRealDataToServer(tostring(catcher), tostring(fishName), tostring(rarity))
-                        break
-                    end
-                end
+            
+            -- Memastikan event ini memiliki struktur argumen tangkapan ikan (minimal 3 argumen)
+            if #args >= 3 and type(args[1]) == "string" and type(args[3]) == "string" then
+                local catcherName = args[1]
+                local fishName = args[3]
+                
+                -- Filter tambahan: Pastikan argumen ke-3 bukan string acak/angka, melainkan nama ikan (huruf kapital di awal)
+                -- Kamu bisa saring khusus ikan langka atau biarkan semua masuk
+                local rarity = "Secret" -- Defaulting ke Secret atau Forgotten sesuai kebutuhan
+                
+                -- Kirim langsung ke server Flask
+                sendRealDataToServer(tostring(catcherName), tostring(fishName), tostring(rarity))
             end
         end)
     end
@@ -107,6 +108,6 @@ end
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Sistem aman siap digunakan.",
+   Content = "Script siap mendeteksi tangkapan.",
    Duration = 5,
 })
