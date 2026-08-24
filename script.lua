@@ -1,5 +1,5 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - STABLE & FLEXIBLE HOOK
+-- SCRIPT WEBHOOK FISH IT - STRICT & CLEAN EXTRACTOR
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -13,7 +13,17 @@ local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
 local API_KEY = "TalonRahasiaBanget123" -- Pastikan sama dengan di Flask
 local autoObserverActive = false
 
--- Fungsi pengirim data aman ke Server Flask
+-- Daftar kata sistem yang HARUS diabaikan agar tidak nyangkut
+local blacklistWords = {"OnlinePlayers", "Head", "Set", "LoadBeat", "UI", "Button", "Frame"}
+
+local function isBlacklisted(name)
+    for _, word in ipairs(blacklistWords) do
+        if name == word then return true end
+    end
+    return false
+end
+
+-- Fungsi pengirim data bersih ke Server Flask
 local function sendDataToServer(catcherName, fishName, fishTier, fishWeight, fishVariant, fishChance)
     local payload = {
         nickname = catcherName,
@@ -41,7 +51,7 @@ local function sendDataToServer(catcherName, fishName, fishTier, fishWeight, fis
                 })
                 Rayfield:Notify({
                     Title = "Webhook Terkirim!",
-                    Content = fishName,
+                    Content = fishName .. " (" .. fishWeight .. ")",
                     Duration = 4,
                 })
             end)
@@ -52,7 +62,7 @@ end
 -- Membuat Window UI Rayfield
 local Window = Rayfield:CreateWindow({
    Name = "Webhook Kesayangan Talon",
-   LoadingTitle = "Loading Stable Hook...",
+   LoadingTitle = "Loading Clean Hook...",
    LoadingSubtitle = "by Akihito_",
    ConfigurationSaving = { Enabled = false }
 })
@@ -60,15 +70,15 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
 MainTab:CreateToggle({
-   Name = "Aktifkan Auto Webhook",
+   Name = "Aktifkan Clean Webhook",
    CurrentValue = false,
-   Flag = "StableHookToggle",
+   Flag = "CleanHookToggle",
    Callback = function(Value)
       autoObserverActive = Value
       if Value then
           Rayfield:Notify({
               Title = "Hook Aktif",
-              Content = "Memantau tangkapan ikan...",
+              Content = "Memantau tangkapan ikan secara bersih...",
               Duration = 4,
           })
       else
@@ -82,7 +92,7 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- EVENT LISTENER FLEKSIBEL (TABEL & STRING)
+-- PENCARIAN DATA TABEL YANG KETAT & AMAN
 -- ============================================================
 for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
     if descendant:IsA("RemoteEvent") then
@@ -91,10 +101,12 @@ for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
             
             local args = {...}
             for _, v in ipairs(args) do
-                -- Jika data dikirim dalam bentuk tabel
+                -- Kita fokus hanya pada tabel data yang dikirim game saat ada event ikan
                 if type(v) == "table" then
                     local fishName = v.Name or v.FishName or v.Item or v.Title
-                    if fishName and type(fishName) == "string" and #fishName > 2 then
+                    
+                    -- Pastikan nama ikan valid, panjangnya pas, dan bukan bagian dari UI/Sistem
+                    if fishName and type(fishName) == "string" and #fishName > 2 and not isBlacklisted(fishName) then
                         local catcher = v.Player or v.Username or LocalPlayer.Name
                         local tier = v.Tier or v.Rarity or "SECRET"
                         local weight = tostring(v.Weight or v.Size or "0") .. " kg"
@@ -102,15 +114,6 @@ for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
                         local chance = v.Chance or v.Odds or "1 in 3M"
                         
                         sendDataToServer(tostring(catcher), tostring(fishName), tostring(tier), weight, tostring(variant), tostring(chance))
-                        break
-                    end
-                -- Jika data dikirim dalam bentuk string teks mentah
-                elseif type(v) == "string" then
-                    if string.find(v, "obtained") or (#v > 3 and #v < 30 and not string.find(v, "http")) then
-                        local catcher = LocalPlayer.Name
-                        local fishName = v
-                        
-                        sendDataToServer(catcher, fishName, "SECRET", "0 kg", "Normal", "1 in 3M")
                         break
                     end
                 end
@@ -121,6 +124,6 @@ end
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Sistem siap dijalankan.",
+   Content = "Filter ketat siap mendeteksi ikan asli.",
    Duration = 5,
 })
