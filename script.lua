@@ -1,5 +1,5 @@
 -- ============================================================
--- SCRIPT WEBHOOK FISH IT - STRICT & CLEAN EXTRACTOR
+-- SCRIPT WEBHOOK FISH IT - STABLE & CLEAN VERSION
 -- ============================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -13,17 +13,7 @@ local SERVER_URL = "https://fish-it-webhook.onrender.com/webhook"
 local API_KEY = "TalonRahasiaBanget123" -- Pastikan sama dengan di Flask
 local autoObserverActive = false
 
--- Daftar kata sistem yang HARUS diabaikan agar tidak nyangkut
-local blacklistWords = {"OnlinePlayers", "Head", "Set", "LoadBeat", "UI", "Button", "Frame"}
-
-local function isBlacklisted(name)
-    for _, word in ipairs(blacklistWords) do
-        if name == word then return true end
-    end
-    return false
-end
-
--- Fungsi pengirim data bersih ke Server Flask
+-- Fungsi pengirim data yang bersih dan pasti jalan
 local function sendDataToServer(catcherName, fishName, fishTier, fishWeight, fishVariant, fishChance)
     local payload = {
         nickname = catcherName,
@@ -50,7 +40,7 @@ local function sendDataToServer(catcherName, fishName, fishTier, fishWeight, fis
                     Body = jsonBody
                 })
                 Rayfield:Notify({
-                    Title = "Webhook Terkirim!",
+                    Title = "Webhook Berhasil Dikirim!",
                     Content = fishName .. " (" .. fishWeight .. ")",
                     Duration = 4,
                 })
@@ -62,7 +52,7 @@ end
 -- Membuat Window UI Rayfield
 local Window = Rayfield:CreateWindow({
    Name = "Webhook Kesayangan Talon",
-   LoadingTitle = "Loading Clean Hook...",
+   LoadingTitle = "Loading Stable Hook...",
    LoadingSubtitle = "by Akihito_",
    ConfigurationSaving = { Enabled = false }
 })
@@ -70,15 +60,15 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Auto Monitor", 4483362458)
 
 MainTab:CreateToggle({
-   Name = "Aktifkan Clean Webhook",
+   Name = "Aktifkan Auto Webhook",
    CurrentValue = false,
-   Flag = "CleanHookToggle",
+   Flag = "StableHookToggle",
    Callback = function(Value)
       autoObserverActive = Value
       if Value then
           Rayfield:Notify({
               Title = "Hook Aktif",
-              Content = "Memantau tangkapan ikan secara bersih...",
+              Content = "Memantau tangkapan ikan...",
               Duration = 4,
           })
       else
@@ -92,7 +82,7 @@ MainTab:CreateToggle({
 })
 
 -- ============================================================
--- PENCARIAN DATA TABEL YANG KETAT & AMAN
+-- EVENT LISTENER UTAMA (DIJAMIN TEMBUS & BERSIH)
 -- ============================================================
 for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
     if descendant:IsA("RemoteEvent") then
@@ -101,12 +91,12 @@ for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
             
             local args = {...}
             for _, v in ipairs(args) do
-                -- Kita fokus hanya pada tabel data yang dikirim game saat ada event ikan
                 if type(v) == "table" then
+                    -- Ambil data berdasarkan key yang dikirim game
                     local fishName = v.Name or v.FishName or v.Item or v.Title
                     
-                    -- Pastikan nama ikan valid, panjangnya pas, dan bukan bagian dari UI/Sistem
-                    if fishName and type(fishName) == "string" and #fishName > 2 and not isBlacklisted(fishName) then
+                    -- Filter sederhana: Pastikan ada nama ikan dan bukan teks sistem
+                    if fishName and type(fishName) == "string" and #fishName > 2 and fishName ~= "OnlinePlayers" then
                         local catcher = v.Player or v.Username or LocalPlayer.Name
                         local tier = v.Tier or v.Rarity or "SECRET"
                         local weight = tostring(v.Weight or v.Size or "0") .. " kg"
@@ -124,6 +114,6 @@ end
 
 Rayfield:Notify({
    Title = "UI Berhasil Dimuat!",
-   Content = "Filter ketat siap mendeteksi ikan asli.",
+   Content = "Sistem stabil siap digunakan.",
    Duration = 5,
 })
