@@ -21,17 +21,15 @@ def webhook():
     fish_name = data.get("fishName", "Unknown Fish")
     fish_tier = data.get("fishTier", "SECRET")
     fish_weight = data.get("fishWeight", "0 kg")
-    fish_variant = data.get("fishVariant", None)  # Bisa None kalau tidak ada mutasi
-    fish_chance = data.get("fishChance", "Unknown")
+    fish_variant = data.get("fishVariant", None)
+    fish_chance = data.get("fishChance", "1 in 3M")
 
-    # Susun fields Discord mirip gaya Lynx
     fields = [
         {"name": "👤 Pemain", "value": f"`{nickname}`", "inline": True},
         {"name": "🐟 Fish Name", "value": f"**{fish_name}** ({fish_weight})", "inline": False},
         {"name": "⭐ Fish Tier", "value": f"`{fish_tier}`", "inline": True},
     ]
 
-    # Kalau ikannya punya varian/mutasi (seperti "Stone"), masukkan field-nya
     if fish_variant and fish_variant != "Normal":
         fields.append({"name": "🧬 Variant", "value": f"`{fish_variant}`", "inline": True})
 
@@ -50,11 +48,9 @@ def webhook():
     }
 
     response = requests.post(DISCORD_WEBHOOK_URL, json=discord_payload)
-
     if response.status_code in [200, 204]:
         return jsonify({"status": "success"}), 200
-    else:
-        return jsonify({"status": "error"}), 500
+    return jsonify({"status": "error"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
